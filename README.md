@@ -99,6 +99,944 @@ Cara membaca diagram: klien bertanya dulu ke DNS untuk mengetahui alamat `jujuts
 
 ---
 
+
+# PRAKTIKUM JARINGAN KOMPUTER MODUL 3
+
+## Anggota Kelompok (K-48)
+
+| Nama | NRP |
+| --- | --- |
+| Tafidah Hasna Mumtazah | 5027251025 |
+| Iqbal Rizki Muhammad Fadhli | 5027251027 |
+
+---
+
+## Daftar Isi
+
+- [0. Topologi dan Tabel IP](#0-topologi-dan-tabel-ip)
+- [Soal 1 — Konfigurasi Router dan Konektivitas](#soal-1-konfigurasi-router-dan-konektivitas)
+- [Soal 2 — Konfigurasi DHCP Server](#soal-2-konfigurasi-dhcp-server)
+- [Soal 3 — DHCP Relay](#soal-3-dhcp-relay)
+- [Soal 4 — Pembagian DHCP Pool Network 2](#soal-4-pembagian-dhcp-pool-network-2)
+- [Soal 5 — Short Lease dan Long Lease](#soal-5-short-lease-dan-long-lease)
+- [Soal 6 — DHCP Fixed Address](#soal-6-dhcp-fixed-address)
+- [Soal 7 — Verifikasi Konfigurasi Seluruh Client](#soal-7-verifikasi-konfigurasi-seluruh-client)
+- [Soal 8 — Packet Capture DHCP](#soal-8-packet-capture-dhcp)
+- [Soal 9 — Pengujian Gangguan DHCP Relay](#soal-9-pengujian-gangguan-dhcp-relay)
+- [Soal 10 — Autostart dan Pengujian Setelah Restart](#soal-10-autostart-dan-pengujian-setelah-restart)
+- [Kendala](#kendala)
+- [Kesimpulan](#kesimpulan)
+
+---
+
+# 0. Topologi dan Tabel IP
+
+Infrastruktur jaringan pada praktikum Modul 3 terdiri atas empat jaringan yang saling terhubung melalui router utama **jichi**. Router tersebut bertugas sebagai gateway, meneruskan trafik antarjaringan, menyediakan akses keluar melalui NAT, serta menjadi DHCP Relay untuk meneruskan permintaan alamat IP dari client menuju DHCP Server **tengen**.
+
+Network 1 digunakan sebagai DMZ yang menampung layanan DNS dan reverse proxy. Network 2 digunakan oleh client Divisi A, sedangkan Network 3 digunakan oleh client Divisi B. Network 4 merupakan Data Center yang menampung DHCP Server dan berbagai layanan server lainnya.
+
+### Tabel IP Address
+
+| Node | Peran | Network | IP Address |
+| --- | --- | --- | --- |
+| jichi | Router utama, NAT, DHCP Relay | Network 1–4 | `192.235.1.1`, `192.235.2.1`, `192.235.3.1`, `192.235.4.1` |
+| tengen | DHCP Server | Network 4 | `192.235.4.10` |
+| utahime | DNS Master | Network 1 | `192.235.1.2` |
+| shoko | DNS Slave | Network 1 | `192.235.1.3` |
+| gojo | Public Reverse Proxy | Network 1 | `192.235.1.4` |
+| itadori | Client DHCP Pool 1 | Network 2 | Dinamis |
+| fushiguro | Client DHCP Pool 1 | Network 2 | Dinamis |
+| zenin | Client DHCP Pool 2 | Network 2 | Dinamis |
+| okkotsu | Client DHCP Pool 2 | Network 2 | Dinamis |
+| ino | Client Short Lease | Network 3 | Dinamis |
+| kusakabe | Client Short Lease | Network 3 | Dinamis |
+| miwa | Client Long Lease | Network 3 | Dinamis |
+| kugisaki | Client Fixed Address | Network 3 | `192.235.3.99` |
+
+### Pembagian Subnet
+
+| Network | Subnet | Gateway |
+| --- | --- | --- |
+| Network 1 | `192.235.1.0/24` | `192.235.1.1` |
+| Network 2 | `192.235.2.0/24` | `192.235.2.1` |
+| Network 3 | `192.235.3.0/24` | `192.235.3.1` |
+| Network 4 | `192.235.4.0/24` | `192.235.4.1` |
+
+Seluruh jaringan internal menggunakan subnet mask `255.255.255.0` atau `/24`. DHCP Server berada pada Network 4, sedangkan permintaan DHCP dari Network 2 dan Network 3 diteruskan oleh jichi melalui DHCP Relay.
+
+---
+
+# Soal 1 — Konfigurasi Router dan Konektivitas
+
+## Penyampaian Ulang Soal
+
+Pulihkan konektivitas dasar antarjaringan dengan mengonfigurasi jichi sebagai router utama. Interface `eth0` memperoleh alamat WAN melalui NAT, sedangkan `eth1` sampai `eth4` menjadi gateway Network 1 sampai Network 4. Aktifkan IPv4 forwarding dan source NAT, kemudian tetapkan IP statis host infrastruktur sesuai tabel spesifikasi. Buktikan konektivitas setiap host ke gateway dan akses eksternal dari host yang relevan.
+
+## Maksud dari Soal No. 1
+
+Soal ini bertujuan membangun fondasi jaringan agar setiap node dapat berkomunikasi sesuai subnet masing-masing. Router jichi menjadi penghubung empat jaringan internal dan menyediakan jalur menuju jaringan eksternal melalui interface WAN.
+
+IPv4 forwarding diperlukan agar paket dapat diteruskan dari satu interface ke interface lainnya. Sementara itu, source NAT menggunakan mekanisme masquerade supaya alamat IP privat dari jaringan internal dapat menggunakan alamat interface WAN ketika mengakses jaringan eksternal.
+
+Konfigurasi IP statis juga diperlukan untuk host infrastruktur agar alamat gateway, DNS, dan server lain tidak berubah-ubah.
+
+## Cara Mengerjakan
+
+1. Konfigurasikan `eth0` pada jichi agar memperoleh alamat IP dari NAT.
+2. Tetapkan alamat IP statis pada `eth1`, `eth2`, `eth3`, dan `eth4`.
+3. Aktifkan IPv4 forwarding menggunakan `sysctl`.
+4. Tambahkan aturan source NAT dengan iptables.
+5. Pastikan setiap interface aktif dan memiliki alamat IP yang sesuai.
+6. Lakukan pengujian konektivitas menggunakan `ping`, `ip addr`, dan `ip route`.
+
+## Konfigurasi Router jichi
+
+Konfigurasi interface router disimpan pada `/etc/network/interfaces`.
+
+```bash
+cat > /etc/network/interfaces <<'EOF'
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+
+auto eth1
+iface eth1 inet static
+    address 192.235.1.1
+    netmask 255.255.255.0
+
+auto eth2
+iface eth2 inet static
+    address 192.235.2.1
+    netmask 255.255.255.0
+
+auto eth3
+iface eth3 inet static
+    address 192.235.3.1
+    netmask 255.255.255.0
+
+auto eth4
+iface eth4 inet static
+    address 192.235.4.1
+    netmask 255.255.255.0
+EOF
+```
+
+Aktifkan interface dan IPv4 forwarding, kemudian tambahkan aturan NAT.
+
+```bash
+ifup eth1 eth2 eth3 eth4 2>/dev/null
+
+sysctl -w net.ipv4.ip_forward=1
+
+echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+```
+
+## Validasi
+
+Periksa alamat interface dan tabel routing pada jichi.
+
+```bash
+ip addr
+ip route
+sysctl net.ipv4.ip_forward
+iptables -t nat -L POSTROUTING -n -v
+```
+
+Lakukan pengujian konektivitas dari host yang relevan menuju gateway masing-masing.
+
+```bash
+ping -c 3 192.235.1.1
+ping -c 3 192.235.2.1
+ping -c 3 192.235.3.1
+ping -c 3 192.235.4.1
+```
+
+## Hasil
+
+Berdasarkan tangkapan layar yang tersedia, konfigurasi alamat IP, tabel routing, dan pengujian ping digunakan untuk memeriksa konektivitas dasar jaringan.
+
+![Hasil konfigurasi alamat IP interface](assest/1-ip-a.png)
+
+![Hasil pemeriksaan tabel routing](screenshot/1/1-ip-route.png)
+
+![Hasil pengujian konektivitas menggunakan ping](screenshot/1/1-ping.png)
+
+## Analisis
+
+Konfigurasi interface memastikan setiap jaringan mempunyai gateway yang sesuai. Tabel routing digunakan untuk memeriksa jalur yang tersedia, sedangkan pengujian ping membantu memastikan konektivitas antarperangkat.
+
+IPv4 forwarding dan source NAT merupakan bagian penting agar paket dari jaringan internal dapat diteruskan ke jaringan lain dan keluar melalui interface WAN.
+
+---
+
+# Soal 2 — Konfigurasi DHCP Server
+
+## Penyampaian Ulang Soal
+
+Konfigurasikan `isc-dhcp-server` pada tengen dengan alamat `192.235.4.10`. Deklarasikan Network 4 sebagai subnet lokal tanpa pool dinamis, kemudian siapkan scope DHCP untuk Network 2 dan Network 3. Validasi konfigurasi dan pastikan layanan berjalan tanpa kesalahan `No subnet declaration`.
+
+## Maksud dari Soal No. 2
+
+DHCP (*Dynamic Host Configuration Protocol*) digunakan untuk memberikan konfigurasi jaringan kepada client secara otomatis. Konfigurasi tersebut dapat mencakup alamat IP, subnet mask, gateway, DNS, dan informasi domain.
+
+Tengen bertugas sebagai DHCP Server yang melayani kebutuhan client dari Network 2 dan Network 3. Karena DHCP Server berada pada Network 4, deklarasi subnet Network 4 tetap diperlukan meskipun tidak menyediakan pool dinamis pada subnet tersebut.
+
+## Cara Mengerjakan
+
+1. Tetapkan alamat IP tengen menjadi `192.235.4.10/24`.
+2. Instal paket `isc-dhcp-server`.
+3. Deklarasikan Network 4 sebagai subnet lokal tanpa rentang alamat dinamis.
+4. Deklarasikan Network 2 dan Network 3 pada file `/etc/dhcp/dhcpd.conf`.
+5. Tentukan rentang alamat IP, gateway, dan DNS untuk setiap subnet.
+6. Atur interface layanan DHCP agar mendengarkan pada `eth0`.
+7. Jalankan pemeriksaan konfigurasi sebelum memulai ulang layanan.
+
+## Konfigurasi DHCP Server
+
+Contoh konfigurasi awal DHCP Server pada tengen:
+
+```bash
+echo "nameserver 192.168.122.1" > /etc/resolv.conf
+
+apt-get update -y
+apt-get install -y isc-dhcp-server
+
+ip addr add 192.235.4.10/24 dev eth0 2>/dev/null
+ip link set eth0 up
+```
+
+Konfigurasi DHCP:
+
+```bash
+cat > /etc/dhcp/dhcpd.conf <<'EOF'
+subnet 192.235.4.0 netmask 255.255.255.0 {
+}
+
+subnet 192.235.2.0 netmask 255.255.255.0 {
+    range 192.235.2.10 192.235.2.35;
+    option routers 192.235.2.1;
+    option domain-name-servers 192.168.122.1;
+}
+
+subnet 192.235.3.0 netmask 255.255.255.0 {
+    range 192.235.3.10 192.235.3.50;
+    option routers 192.235.3.1;
+    option domain-name-servers 192.168.122.1;
+}
+EOF
+```
+
+Atur interface layanan DHCP dan validasi konfigurasi.
+
+```bash
+sed -i 's/INTERFACESv4=""/INTERFACESv4="eth0"/' /etc/default/isc-dhcp-server
+
+dhcpd -t -cf /etc/dhcp/dhcpd.conf
+
+service isc-dhcp-server restart
+service isc-dhcp-server status
+```
+
+Konfigurasi ini merupakan konfigurasi awal. Rentang pool dan opsi DHCP selanjutnya disesuaikan dengan ketentuan soal 4 sampai 6.
+
+## Validasi
+
+Periksa apakah file konfigurasi dapat dibaca dan layanan DHCP berjalan.
+
+```bash
+dhcpd -t -cf /etc/dhcp/dhcpd.conf
+service isc-dhcp-server status
+cat /etc/dhcp/dhcpd.conf
+```
+
+## Hasil
+
+![Konfigurasi awal DHCP Server pada tengen](screenshot/2/2-konfigurasi-dhcp.png)
+
+![Konfigurasi interface dan alamat IP tengen](screenshot/2/2-konfigurasi-interface.png)
+
+## Analisis
+
+Deklarasi Network 4 tanpa pool dinamis memungkinkan DHCP Server mengenali subnet tempat dirinya berada tanpa membagikan alamat IP dinamis pada jaringan tersebut.
+
+Sementara itu, deklarasi Network 2 dan Network 3 menyediakan scope alamat bagi client. Validasi menggunakan `dhcpd -t` diperlukan untuk memastikan sintaks konfigurasi benar sebelum layanan dijalankan.
+
+---
+
+# Soal 3 — DHCP Relay
+
+## Penyampaian Ulang Soal
+
+Konfigurasikan jichi sebagai DHCP Relay menuju tengen pada alamat `192.235.4.10`. Gunakan interface yang terhubung ke Network 2 dan Network 3 untuk meneruskan permintaan DHCP. Buktikan bahwa client dari kedua subnet berhasil memperoleh lease melalui relay.
+
+## Maksud dari Soal No. 3
+
+Permintaan DHCP pada awalnya dikirim menggunakan broadcast. Broadcast tersebut tidak diteruskan secara otomatis oleh router ke subnet lain.
+
+Karena DHCP Server tengen berada di Network 4, diperlukan DHCP Relay pada jichi untuk menerima permintaan dari Network 2 dan Network 3, kemudian meneruskannya kepada tengen.
+
+Relay juga menyertakan informasi mengenai jaringan asal permintaan melalui field `giaddr`, sehingga DHCP Server dapat menentukan scope yang sesuai untuk client.
+
+## Cara Mengerjakan
+
+1. Pastikan DHCP Server tengen sudah aktif.
+2. Instal paket `isc-dhcp-relay` pada jichi.
+3. Tentukan tengen sebagai server tujuan relay.
+4. Tentukan interface Network 2 dan Network 3 sebagai interface relay.
+5. Aktifkan IPv4 forwarding.
+6. Mulai ulang layanan DHCP Relay.
+7. Minta client memperoleh alamat IP baru dan periksa hasilnya.
+
+## Konfigurasi DHCP Relay pada jichi
+
+```bash
+echo "nameserver 192.168.122.1" > /etc/resolv.conf
+
+apt-get update -y
+apt-get install -y isc-dhcp-relay
+```
+
+Konfigurasikan tujuan relay pada `/etc/default/isc-dhcp-relay`.
+
+```bash
+cat > /etc/default/isc-dhcp-relay <<'EOF'
+SERVERS="192.235.4.10"
+INTERFACES="eth2 eth3 eth4"
+OPTIONS=""
+EOF
+```
+
+Aktifkan forwarding dan mulai ulang layanan.
+
+```bash
+sysctl -w net.ipv4.ip_forward=1
+
+service isc-dhcp-relay restart
+service isc-dhcp-relay status
+```
+
+## Validasi
+
+Pada client Network 2 atau Network 3, minta lease baru menggunakan `udhcpc`.
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+```
+
+Periksa alamat IP dan routing setelah client memperoleh lease.
+
+```bash
+ip addr
+ip route
+```
+
+## Hasil
+
+![Konfigurasi DHCP Relay pada jichi](screenshot/3/3-konfigurasi-dhcp-relay.png)
+
+![Pengujian permintaan DHCP dari client](screenshot/3/3-ip-dhcp-tes.png)
+
+## Analisis
+
+DHCP Relay memungkinkan client pada subnet berbeda tetap memperoleh konfigurasi dari satu DHCP Server terpusat. Ketika client mengirimkan permintaan DHCP, jichi meneruskannya ke tengen sehingga server dapat memberikan alamat berdasarkan subnet asal client.
+
+Keberhasilan client memperoleh lease dari `192.235.4.10` menjadi bukti bahwa permintaan DHCP dapat mencapai server melalui jalur relay.
+
+---
+
+# Soal 4 — Pembagian DHCP Pool Network 2
+
+## Penyampaian Ulang Soal
+
+Atur dua pool DHCP pada Network 2. Pool 1 dengan rentang `192.235.2.10–192.235.2.35` diperuntukkan bagi itadori dan fushiguro, sedangkan Pool 2 dengan rentang `192.235.2.70–192.235.2.95` diperuntukkan bagi zenin dan okkotsu. Rentang `192.235.2.36–192.235.2.69` tidak boleh dialokasikan. Gunakan DHCP class berdasarkan MAC Address atau Client ID untuk memisahkan kedua kelompok.
+
+## Maksud dari Soal No. 4
+
+Soal ini mengharuskan pembagian alamat IP berdasarkan kelompok client, meskipun seluruh client berada pada subnet yang sama.
+
+DHCP class digunakan untuk mengidentifikasi kelompok client berdasarkan MAC Address. Setelah client cocok dengan class tertentu, DHCP Server hanya memberikan alamat dari pool yang diizinkan untuk kelompok tersebut.
+
+Dengan demikian, pemisahan pool tidak hanya berdasarkan urutan permintaan, tetapi berdasarkan identitas client.
+
+## Cara Mengerjakan
+
+1. Identifikasi MAC Address itadori, fushiguro, zenin, dan okkotsu.
+2. Buat DHCP class untuk kelompok Pool 1 dan Pool 2.
+3. Masukkan alamat MAC setiap client ke dalam class yang sesuai.
+4. Buat dua pool DHCP dengan rentang yang telah ditentukan.
+5. Gunakan `allow members of` untuk membatasi setiap pool kepada class yang sesuai.
+6. Validasi konfigurasi dan mulai ulang DHCP Server.
+7. Perbarui lease pada seluruh client Network 2.
+
+## Konfigurasi DHCP Class dan Pool
+
+Pada tengen, deklarasikan class berdasarkan MAC Address client.
+
+```conf
+class "pool1" {
+    match if hardware = 01:02:42:21:c0:08:00
+        or hardware = 01:02:42:b2:1e:db:00;
+}
+
+class "pool2" {
+    match if hardware = 01:02:42:ed:eb:1b:00
+        or hardware = 01:02:42:67:9b:e9:00;
+}
+```
+
+Kemudian atur scope Network 2.
+
+```conf
+subnet 192.235.2.0 netmask 255.255.255.0 {
+    option routers 192.235.2.1;
+    option subnet-mask 255.255.255.0;
+    option broadcast-address 192.235.2.255;
+
+    pool {
+        allow members of "pool1";
+        range 192.235.2.10 192.235.2.35;
+    }
+
+    pool {
+        allow members of "pool2";
+        range 192.235.2.70 192.235.2.95;
+    }
+}
+```
+
+MAC Address harus disesuaikan dengan hasil pemeriksaan interface masing-masing client.
+
+## Validasi
+
+Setelah konfigurasi diterapkan, minta masing-masing client memperbarui lease.
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+ip addr
+ip route
+```
+
+Ulangi langkah tersebut pada itadori, fushiguro, zenin, dan okkotsu.
+
+## Hasil
+
+![Alamat IP client itadori](screenshot/4/4-ip-itadori.png)
+
+![Alamat IP client fushiguro](screenshot/4/4-ip-fusiguro.png)
+
+![Alamat IP client zenin](screenshot/4/4-ip-zenin.png)
+
+![Alamat IP client okkotsu](screenshot/4/4-ip-okkotsu.png)
+
+## Analisis
+
+Pembagian DHCP pool berdasarkan class memastikan setiap kelompok memperoleh alamat sesuai kebijakan yang ditentukan.
+
+Pool 1 menggunakan rentang `192.235.2.10–192.235.2.35`, sedangkan Pool 2 menggunakan rentang `192.235.2.70–192.235.2.95`. Dengan demikian, rentang `192.235.2.36–192.235.2.69` tidak termasuk dalam kedua pool tersebut.
+
+Alamat yang diterima masing-masing client perlu dicocokkan dengan rentang pool kelompoknya untuk memastikan konfigurasi class bekerja dengan benar.
+
+---
+
+# Soal 5 — Short Lease dan Long Lease
+
+## Penyampaian Ulang Soal
+
+Pada Network 3, berikan short lease selama 30 menit atau 1800 detik kepada ino dan kusakabe, serta long lease selama 12 jam atau 43200 detik kepada miwa. Gunakan pool short lease `192.235.3.10–192.235.3.89` dan pool long lease `192.235.3.100–192.235.3.199`. Atur default lease dan maximum lease sesuai kelompok client. Berikan DNS `192.235.1.2` dan `192.235.1.3`, serta domain-search `K48.com`.
+
+## Maksud dari Soal No. 5
+
+DHCP lease menentukan berapa lama sebuah alamat IP dapat digunakan oleh client sebelum perlu diperbarui.
+
+Short lease sesuai untuk client yang membutuhkan durasi peminjaman alamat lebih pendek, sedangkan long lease memberikan waktu penggunaan yang lebih lama.
+
+Pada soal ini, ino dan kusakabe menggunakan lease 1800 detik, sedangkan miwa menggunakan lease 43200 detik. Pembagian class diperlukan agar server dapat menerapkan rentang alamat dan durasi lease berbeda pada subnet yang sama.
+
+## Cara Mengerjakan
+
+1. Identifikasi MAC Address ino, kusakabe, dan miwa.
+2. Buat class `short` untuk ino dan kusakabe.
+3. Buat class `long` untuk miwa.
+4. Tentukan rentang alamat masing-masing pool.
+5. Atur `default-lease-time` dan `max-lease-time` pada setiap pool.
+6. Tambahkan opsi gateway, subnet mask, broadcast, DNS, dan domain-search.
+7. Validasi konfigurasi dan mulai ulang DHCP Server.
+8. Perbarui lease setiap client dan periksa hasilnya.
+
+## Konfigurasi DHCP Pool Network 3
+
+```conf
+class "short" {
+    match if hardware = 01:f2:dd:ec:51:c9:cb
+        or hardware = 01:02:42:ad:7b:60:00;
+}
+
+class "long" {
+    match if hardware = 01:02:42:aa:19:d8:00;
+}
+
+subnet 192.235.3.0 netmask 255.255.255.0 {
+    option routers 192.235.3.1;
+    option subnet-mask 255.255.255.0;
+    option broadcast-address 192.235.3.255;
+    option domain-name-servers 192.235.1.2, 192.235.1.3;
+    option domain-search "K48.com";
+    option domain-name "K48.com";
+
+    pool {
+        allow members of "short";
+        range 192.235.3.10 192.235.3.89;
+        default-lease-time 1800;
+        max-lease-time 1800;
+    }
+
+    pool {
+        allow members of "long";
+        range 192.235.3.100 192.235.3.199;
+        default-lease-time 43200;
+        max-lease-time 43200;
+    }
+}
+```
+
+**Catatan:** alamat MAC pada konfigurasi harus dicocokkan dengan MAC Address asli setiap client. Penulisan class di atas mengikuti contoh format konfigurasi DHCP; pastikan nilai MAC sesuai sebelum dijalankan.
+
+## Validasi
+
+Periksa konfigurasi DHCP Server.
+
+```bash
+dhcpd -t -cf /etc/dhcp/dhcpd.conf
+service isc-dhcp-server restart
+```
+
+Pada masing-masing client, perbarui lease dan periksa alamat IP.
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+ip addr
+ip route
+```
+
+## Hasil
+
+![Alamat IP client ino](screenshot/5/5-ino-ip.png)
+
+![Alamat IP client kusakabe](screenshot/5/5-kusakabe-ip.png)
+
+![Alamat IP client miwa](screenshot/5/5-miwa-ip.png)
+
+## Analisis
+
+Konfigurasi membagi client Network 3 menjadi dua kelompok. Ino dan kusakabe menggunakan rentang `192.235.3.10–192.235.3.89` dengan lease 1800 detik, sedangkan miwa menggunakan rentang `192.235.3.100–192.235.3.199` dengan lease 43200 detik.
+
+Selain alamat IP, DHCP Server juga memberikan gateway `192.235.3.1`, subnet mask `/24`, DNS `192.235.1.2` dan `192.235.1.3`, serta domain-search `K48.com`.
+
+Alamat IP yang terlihat pada tangkapan layar membuktikan alokasi alamat client. Durasi lease secara spesifik perlu diperiksa melalui output DHCP client atau data lease pada tengen.
+
+---
+
+# Soal 6 — DHCP Fixed Address
+
+## Penyampaian Ulang Soal
+
+Kugisaki ditetapkan sebagai client VIP yang harus memperoleh alamat IP yang sama setiap kali terhubung. Buat DHCP static lease berdasarkan MAC Address kugisaki dengan fixed address `192.235.3.99`. Pastikan alamat tersebut berada di luar seluruh pool dinamis, validasi konfigurasi, kemudian perbarui lease client dan buktikan bahwa alamat yang diterima sesuai dengan reservasi.
+
+## Maksud dari Soal No. 6
+
+DHCP fixed address merupakan mekanisme reservasi alamat IP berdasarkan identitas client. Berbeda dari alokasi dinamis biasa, server akan memberikan alamat yang telah ditentukan kepada client dengan MAC Address yang cocok.
+
+Kugisaki menggunakan alamat `192.235.3.99`. Alamat ini berada di luar pool short lease `192.235.3.10–192.235.3.89` dan pool long lease `192.235.3.100–192.235.3.199`, sehingga tidak berbenturan dengan rentang alokasi dinamis yang telah ditetapkan.
+
+## Cara Mengerjakan
+
+1. Periksa MAC Address kugisaki.
+2. Tambahkan deklarasi `host kugisaki` pada konfigurasi DHCP Server.
+3. Tetapkan `hardware ethernet` sesuai MAC Address client.
+4. Tentukan `fixed-address 192.235.3.99`.
+5. Validasi konfigurasi DHCP Server.
+6. Mulai ulang layanan DHCP.
+7. Perbarui lease kugisaki dan periksa alamat IP yang diperoleh.
+
+## Konfigurasi DHCP Fixed Address
+
+Tambahkan konfigurasi berikut pada tengen.
+
+```conf
+host kugisaki {
+    hardware ethernet 02:42:e4:2c:cd:00;
+    fixed-address 192.235.3.99;
+    default-lease-time 43200;
+    max-lease-time 43200;
+}
+```
+
+MAC Address tersebut harus sesuai dengan MAC Address aktual kugisaki.
+
+Validasi dan mulai ulang layanan.
+
+```bash
+dhcpd -t -cf /etc/dhcp/dhcpd.conf
+service isc-dhcp-server restart
+```
+
+Pada kugisaki, perbarui lease.
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+ip addr
+ip route
+```
+
+## Hasil
+
+![Verifikasi fixed address kugisaki](screenshot/6/6-kugisaki-ip.png)
+
+Hasil pengujian pada tangkapan layar menunjukkan kugisaki memperoleh alamat `192.235.3.99` dari DHCP Server `192.235.4.10`.
+
+## Analisis
+
+Alamat yang diterima sesuai dengan reservasi DHCP yang telah dibuat. Karena `192.235.3.99` berada di luar kedua rentang pool dinamis, alamat tersebut tidak termasuk dalam alokasi untuk kelompok short lease maupun long lease.
+
+Dengan demikian, konfigurasi fixed address memungkinkan kugisaki mempertahankan alamat IP yang telah ditentukan selama permintaan DHCP berasal dari client dengan MAC Address yang sesuai.
+
+---
+
+# Soal 7 — Verifikasi Konfigurasi Seluruh Client
+
+## Penyampaian Ulang Soal
+
+Pastikan setiap client memperoleh konfigurasi jaringan yang sesuai, meliputi subnet mask `255.255.255.0`, gateway, broadcast address, DNS `192.235.1.2` dan `192.235.1.3`, serta domain-search `K48.com`. Periksa alamat IP dan routing seluruh client Divisi A dan Divisi B, kemudian cocokkan lease dengan `/var/lib/dhcp/dhcpd.leases` pada tengen. Pastikan tidak ada alamat yang bertabrakan atau berada di luar kebijakan pool.
+
+## Maksud dari Soal No. 7
+
+Soal ini merupakan tahap verifikasi menyeluruh terhadap konfigurasi DHCP yang telah diterapkan pada soal sebelumnya.
+
+Pemeriksaan tidak hanya dilakukan pada alamat IP yang diperoleh, tetapi juga pada gateway, subnet mask, broadcast address, DNS, domain-search, dan tabel routing. Hasil dari sisi client kemudian dibandingkan dengan catatan lease pada DHCP Server.
+
+Pemeriksaan ini penting untuk memastikan bahwa seluruh client menerima konfigurasi sesuai kelompoknya dan tidak menggunakan alamat di luar rentang yang diizinkan.
+
+## Cara Mengerjakan
+
+1. Perbarui lease masing-masing client Network 2 dan Network 3.
+2. Periksa alamat IP menggunakan `ip addr`.
+3. Periksa gateway dan routing menggunakan `ip route`.
+4. Periksa konfigurasi DNS pada `/etc/resolv.conf`.
+5. Periksa opsi DHCP dan informasi lease pada client.
+6. Pada tengen, periksa `/var/lib/dhcp/dhcpd.leases`.
+7. Cocokkan alamat client dengan rentang pool dan reservasi yang ditentukan.
+
+## Validasi pada Client
+
+Jalankan perintah berikut pada masing-masing client.
+
+```bash
+ip addr
+ip route
+cat /etc/resolv.conf
+```
+
+Untuk memperbarui lease client:
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+```
+
+## Validasi pada DHCP Server
+
+Pada tengen, periksa catatan lease.
+
+```bash
+cat /var/lib/dhcp/dhcpd.leases
+```
+
+Untuk menampilkan bagian penting dari data lease:
+
+```bash
+grep -E "^lease|^  hardware ethernet|^  client-hostname|^  binding state" /var/lib/dhcp/dhcpd.leases
+```
+
+## Hasil
+
+![Verifikasi konfigurasi client ino](screenshot/7/7-ino-verifikasi.png)
+
+![Verifikasi konfigurasi fixed address kugisaki](screenshot/7/7-kugisaki-verifikasi.png)
+
+![Verifikasi konfigurasi client kusakabe](screenshot/7/7-kusakabe-verifikasi.png)
+
+![Verifikasi konfigurasi client miwa](screenshot/7/7-miwa-verifikasi.png)
+
+## Analisis
+
+Hasil pengujian memperlihatkan alokasi alamat pada beberapa client Network 3. Ino memperoleh alamat pada rentang short lease, kugisaki memperoleh fixed address `192.235.3.99`, dan miwa memperoleh alamat pada rentang long lease.
+
+Kusakabe juga diperiksa sebagai client dengan short lease. Pemeriksaan keseluruhan perlu mencocokkan hasil setiap client dengan catatan lease pada tengen untuk memastikan tidak terjadi konflik alamat dan setiap client berada pada rentang yang sesuai.
+
+---
+
+# Soal 8 — Packet Capture DHCP
+
+## Penyampaian Ulang Soal
+
+Lakukan packet capture ketika salah satu client Network 2 atau Network 3 meminta lease baru. Gunakan tcpdump pada tengen atau jalur menuju Data Center untuk menunjukkan urutan DHCPDISCOVER, DHCPOFFER, DHCPREQUEST, dan DHCPACK. Identifikasi alamat server, alamat yang diberikan, lease time, serta field `giaddr`. Pastikan nilai `giaddr` sesuai dengan interface jichi yang menerima permintaan dari subnet client.
+
+## Maksud dari Soal No. 8
+
+Packet capture digunakan untuk mengamati pertukaran paket DHCP secara langsung. Melalui tcpdump, proses pemberian alamat dapat diamati mulai dari permintaan client sampai server mengonfirmasi lease.
+
+Urutan komunikasi DHCP yang diharapkan adalah:
+
+1. **DHCPDISCOVER:** client mencari DHCP Server.
+2. **DHCPOFFER:** server menawarkan alamat IP.
+3. **DHCPREQUEST:** client meminta alamat yang ditawarkan.
+4. **DHCPACK:** server menyetujui permintaan dan mengonfirmasi lease.
+
+Field `giaddr` (*Gateway IP Address*) digunakan oleh DHCP Relay untuk menyampaikan informasi mengenai jaringan asal client kepada server. Informasi tersebut membantu tengen menentukan scope DHCP yang sesuai.
+
+## Cara Mengerjakan
+
+1. Pastikan DHCP Server dan DHCP Relay aktif.
+2. Pada tengen, jalankan tcpdump untuk menangkap paket DHCP.
+3. Pada client, lepaskan atau perbarui lease.
+4. Amati paket yang dikirim dan diterima.
+5. Identifikasi alamat IP server, alamat IP yang ditawarkan, lease time, dan field `giaddr`.
+
+## Perintah Packet Capture
+
+Pada tengen:
+
+```bash
+tcpdump -i eth0 -nvv -s 0 'port 67 or port 68'
+```
+
+Pada client, minta lease baru:
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+```
+
+## Hasil
+
+![Tangkapan layar pengujian packet capture DHCP](screenshot/8/Tangkapan%20Layar%202026-10-13%20pukul%2016.29.53.png)
+
+## Analisis
+
+Packet capture dapat digunakan untuk membuktikan bahwa pertukaran pesan DHCP berlangsung melalui jalur yang benar. Permintaan client diteruskan oleh jichi menuju tengen, kemudian server mengirimkan penawaran dan konfirmasi alamat IP.
+
+Untuk membuktikan seluruh kriteria soal, output tcpdump perlu memperlihatkan urutan pesan DHCP, alamat yang ditawarkan, lease time, alamat server, serta nilai `giaddr`. Nilai `giaddr` harus sesuai dengan alamat interface relay yang menerima permintaan client, yaitu `192.235.2.1` untuk Network 2 atau `192.235.3.1` untuk Network 3.
+
+---
+
+# Soal 9 — Pengujian Gangguan DHCP Relay
+
+## Penyampaian Ulang Soal
+
+Simulasikan gangguan dengan menghentikan layanan DHCP Relay pada jichi sehingga permintaan alamat tidak sampai ke Data Center. Paksa salah satu client Network 2 atau Network 3 meminta lease baru dan catat gejalanya. Setelah itu, pulihkan layanan relay, ulangi permintaan DHCP, lalu buktikan bahwa client kembali memperoleh alamat dari pool yang benar dengan gateway semula.
+
+## Maksud dari Soal No. 9
+
+Soal ini menguji ketahanan layanan DHCP terhadap gangguan pada jalur komunikasi antara client dan server.
+
+Ketika DHCP Relay dihentikan, permintaan broadcast dari client pada Network 2 atau Network 3 tidak dapat diteruskan menuju tengen di Network 4. Akibatnya, client yang meminta alamat baru tidak memperoleh penawaran dari server.
+
+Setelah layanan relay diaktifkan kembali, permintaan DHCP seharusnya dapat diteruskan seperti semula sehingga client kembali memperoleh alamat IP sesuai kebijakan pool.
+
+## Cara Mengerjakan
+
+1. Pastikan client memiliki konfigurasi DHCP yang benar.
+2. Hentikan layanan DHCP Relay pada jichi.
+3. Paksa client meminta lease baru.
+4. Catat pesan kegagalan ketika client tidak memperoleh lease.
+5. Aktifkan kembali layanan DHCP Relay.
+6. Ulangi permintaan DHCP pada client.
+7. Periksa alamat IP, lease time, dan gateway setelah pemulihan.
+
+## Pengujian Saat Gangguan
+
+Pada jichi, hentikan layanan relay.
+
+```bash
+service isc-dhcp-relay stop
+```
+
+Pada client, paksa permintaan lease baru.
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+```
+
+Ketika relay berhenti, client dapat terus mengirimkan DHCPDISCOVER tanpa menerima DHCPOFFER sampai permintaannya dinyatakan gagal.
+
+## Pemulihan Layanan
+
+Aktifkan kembali DHCP Relay pada jichi.
+
+```bash
+service isc-dhcp-relay start
+service isc-dhcp-relay status
+```
+
+Kemudian, pada client:
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+ip addr
+ip route
+```
+
+## Hasil
+
+![Kegagalan memperoleh lease ketika DHCP Relay terganggu](screenshot/9/9-miwa-gagal.png)
+
+![Keberhasilan memperoleh lease setelah DHCP Relay dipulihkan](screenshot/9/9-miwa-berhasil.png)
+
+## Analisis
+
+Pada kondisi gangguan, tangkapan layar menunjukkan miwa mengirimkan permintaan DHCP berulang kali, tetapi tidak memperoleh lease. Hal ini sesuai dengan kondisi ketika jalur relay menuju DHCP Server tidak tersedia.
+
+Setelah layanan dipulihkan, miwa berhasil memperoleh alamat `192.235.3.100` dari server `192.235.4.10` dengan lease time 43200 detik. Alamat tersebut berada pada rentang long lease Network 3 dan routing client kembali menggunakan gateway `192.235.3.1`.
+
+Perbandingan kedua kondisi tersebut menunjukkan bahwa ketersediaan DHCP Relay berpengaruh langsung terhadap kemampuan client memperoleh alamat dari DHCP Server lintas subnet.
+
+---
+
+# Soal 10 — Autostart dan Pengujian Setelah Restart
+
+## Penyampaian Ulang Soal
+
+Aktifkan autostart DHCP Server pada tengen dan DHCP Relay pada jichi, kemudian restart kedua node. Verifikasi status layanan, alamat IP, gateway, lease, dan konektivitas client Network 2 serta Network 3. Pastikan kebijakan Pool 1, Pool 2, short lease, long lease, dan fixed address tetap berlaku.
+
+## Maksud dari Soal No. 10
+
+Konfigurasi jaringan yang hanya berjalan selama node aktif belum cukup untuk menjamin layanan tetap tersedia setelah restart. Oleh karena itu, DHCP Server dan DHCP Relay harus dikonfigurasikan agar berjalan otomatis ketika sistem dinyalakan kembali.
+
+Pengujian setelah restart memastikan konfigurasi layanan tidak bergantung pada perintah manual yang hanya dijalankan sekali. Selain itu, pengujian client digunakan untuk memastikan kebijakan pembagian alamat tetap berjalan setelah layanan kembali aktif.
+
+## Cara Mengerjakan
+
+1. Aktifkan autostart DHCP Server pada tengen.
+2. Aktifkan autostart DHCP Relay pada jichi.
+3. Pastikan kedua layanan dapat dijalankan secara otomatis.
+4. Restart node sesuai kebutuhan pengujian.
+5. Periksa status DHCP Server dan DHCP Relay.
+6. Periksa kembali alamat IP dan gateway client.
+7. Uji kembali alokasi alamat pada Pool 1, Pool 2, short lease, long lease, dan fixed address.
+
+## Konfigurasi Autostart pada tengen
+
+```bash
+systemctl enable isc-dhcp-server 2>/dev/null || update-rc.d isc-dhcp-server enable 2>/dev/null
+
+service isc-dhcp-server status
+```
+
+## Konfigurasi Autostart pada jichi
+
+```bash
+systemctl enable isc-dhcp-relay 2>/dev/null || update-rc.d isc-dhcp-relay enable 2>/dev/null
+
+service isc-dhcp-relay status
+```
+
+Setelah node selesai dimulai kembali, periksa status layanan pada masing-masing node.
+
+Pada tengen:
+
+```bash
+service isc-dhcp-server status
+dhcpd -t -cf /etc/dhcp/dhcpd.conf
+```
+
+Pada jichi:
+
+```bash
+service isc-dhcp-relay status
+ip addr
+ip route
+```
+
+## Validasi Client Setelah Restart
+
+Pada masing-masing client Network 2 dan Network 3, periksa kembali konfigurasi alamat IP.
+
+```bash
+ip addr
+ip route
+cat /etc/resolv.conf
+```
+
+Untuk menguji ulang pemberian alamat, perbarui lease client sesuai kebutuhan.
+
+```bash
+killall udhcpc 2>/dev/null
+ip addr flush dev eth0
+udhcpc -n -i eth0
+```
+
+## Hasil
+
+![Verifikasi client kusakabe setelah restart](screenshot/10/10-kusakabe-reboot.png)
+
+![Verifikasi client miwa setelah restart](screenshot/10/10-miwa-reboot.png)
+
+![Verifikasi client ino setelah restart](screenshot/10/10-ino-reboot.png)
+
+![Verifikasi client kugisaki setelah restart](screenshot/10/10-kugisaki-reboot.png)
+
+## Analisis
+
+Pengujian setelah restart digunakan untuk memastikan bahwa layanan DHCP Server dan DHCP Relay dapat kembali digunakan tanpa konfigurasi manual dari awal.
+
+Pada Network 3, ino dan kusakabe harus tetap memperoleh alamat dari pool short lease, miwa dari pool long lease, dan kugisaki tetap memperoleh fixed address `192.235.3.99`. Untuk Network 2, itadori dan fushiguro harus menggunakan Pool 1, sedangkan zenin dan okkotsu harus menggunakan Pool 2.
+
+Keberhasilan pengujian perlu dinilai dari kesesuaian alamat IP, gateway, lease, dan status layanan setelah restart. Tangkapan layar client setelah restart menjadi bukti bahwa proses pemberian alamat kembali diuji setelah node dijalankan ulang.
+
+---
+
+# Kendala
+
+Beberapa hal yang perlu diperhatikan selama konfigurasi dan pengujian jaringan adalah sebagai berikut.
+
+1. **Konfigurasi interface dan routing.** Setiap interface harus menggunakan alamat IP dan subnet yang sesuai. Kesalahan alamat gateway atau tabel routing dapat mengganggu komunikasi antarjaringan.
+2. **Konfigurasi DHCP Server.** Deklarasi subnet harus sesuai dengan jaringan yang digunakan. File konfigurasi perlu diperiksa menggunakan `dhcpd -t` sebelum layanan dimulai ulang.
+3. **DHCP Relay.** Relay harus menunjuk ke alamat tengen yang benar dan menggunakan interface yang sesuai dengan jaringan client.
+4. **Pembagian pool DHCP.** MAC Address harus cocok dengan client yang dimaksud agar class dapat menentukan pool yang tepat.
+5. **Fixed address.** Reservasi kugisaki harus menggunakan MAC Address yang benar dan alamat yang berada di luar seluruh pool dinamis.
+6. **Pengujian setelah restart.** Status layanan perlu diperiksa kembali setelah node dijalankan ulang untuk memastikan layanan dapat berjalan secara otomatis.
+
+---
+
+# Kesimpulan
+
+Praktikum Modul 3 soal 1 sampai 10 membahas pemulihan konektivitas jaringan, konfigurasi router, pemberian alamat IP otomatis, pemisahan DHCP pool, pengaturan lease, reservasi alamat IP, pemeriksaan paket DHCP, simulasi gangguan, dan pengaktifan layanan otomatis setelah restart.
+
+Router jichi berfungsi sebagai penghubung empat jaringan internal serta meneruskan permintaan DHCP melalui DHCP Relay. Tengen bertugas mengelola alokasi alamat IP sesuai subnet dan kelompok client. Pemisahan pool berdasarkan MAC Address memungkinkan client memperoleh rentang alamat yang berbeda, sedangkan pengaturan short lease, long lease, dan fixed address memberikan kebijakan alokasi yang lebih spesifik.
+
+Pengujian packet capture digunakan untuk memahami proses pertukaran pesan DHCP. Simulasi penghentian relay menunjukkan dampak gangguan terhadap permintaan alamat, sedangkan pengujian setelah pemulihan dan restart digunakan untuk memeriksa ketersediaan layanan.
+
+Secara keseluruhan, rangkaian soal ini menekankan bahwa jaringan yang berfungsi dengan baik tidak hanya memerlukan konfigurasi alamat IP, tetapi juga routing yang benar, layanan DHCP yang konsisten, pembagian alamat yang sesuai kebijakan, serta kemampuan layanan untuk kembali berjalan setelah terjadi gangguan atau restart.
+
+
 ## 📦 Soal 11: DNS Master-Slave BIND9 (utahime dan shoko)
 
 ### Soal 11: Penyampaian Ulang

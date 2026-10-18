@@ -1,105 +1,3 @@
-# PRAKTIKUM JARINGAN KOMPUTER MODUL 3 
-
-## Anggota Kelompok (K-48)
-
-| Nama                   | NRP        |
-| ---------------------- | ---------- |
-| Tafidah Hasna Mumtazah | 5027251025 |
-| Iqbal Rizki Muhammad Fadhli       | 5027251027      |
-
-## Daftar Isi
-
-- [0. Topologi dan Tabel IP](#0-topologi-dan-tabel-ip)
-- [1. Panduan Menjalankan Ulang (GNS3 Baru Dibuka)](#1-panduan-menjalankan-ulang-gns3-baru-dibuka)
-- [Soal 11 — DNS Master-Slave BIND9](#-soal-11-dns-master-slave-bind9-utahime-dan-shoko)
-- [Soal 12 — A Record, CNAME, Reverse DNS, Forwarder](#-soal-12-a-record-cname-reverse-dns-dan-forwarder)
-- [Soal 13 — Replikasi MariaDB](#-soal-13-replikasi-mariadb-master-slave-yaga-dan-inumaki)
-- [Soal 14 — Worker Frontend dan API](#-soal-14-worker-frontend-dan-api)
-- [Soal 15 — Load Balancer geto](#-soal-15-load-balancer-geto-weighted-round-robin-31)
-- [Soal 16 — Reverse Proxy gojo](#-soal-16-reverse-proxy-gojo-path-based-routing)
-- [Soal 17 — IP Asli Klien](#-soal-17-meneruskan-ip-asli-klien)
-- [Soal 18 — Backup dan Health Check](#-soal-18-server-backup-kirara-dan-passive-health-check)
-- [Soal 19 — Proxy Cache dan Rate Limit](#-soal-19-proxy-caching-dan-rate-limiting-di-gojo)
-- [Soal 20 — Benchmark ApacheBench](#-soal-20-benchmark-apachebench-dan-analisis)
-- [Kendala](#kendala)
-- [Kesimpulan](#kesimpulan)
-
----
-
-# Topologi dan Tabel IP
-
-Infrastruktur terdiri atas empat jaringan yang dihubungkan oleh router **jichi**:
-
-- **Network 1 (DMZ):** DNS Master utahime, DNS Slave shoko, dan reverse proxy publik gojo.
-- **Network 2:** klien Divisi A (mendapat IP lewat DHCP relay).
-- **Network 3:** klien Divisi B (lease time berbeda dan fixed address).
-- **Network 4 (Data Center):** DHCP Server tengen, load balancer internal geto, worker aplikasi, dan database.
-
-| Node | Peran | Network | IP |
-| --- | --- | --- | --- |
-| jichi | Router utama, NAT, DHCP Relay | 1–4 | eth1 `192.235.1.1`, eth2 `192.235.2.1`, eth3 `192.235.3.1`, eth4 `192.235.4.1` |
-| utahime | DNS Master | 1 | `192.235.1.2` |
-| shoko | DNS Slave | 1 | `192.235.1.3` |
-| gojo | Public Reverse Proxy (nginx) | 1 | `192.235.1.4` |
-| itadori, fushiguro, zenin, okkotsu | Klien DHCP Divisi A | 2 | dinamis (`192.235.2.x`) |
-| ino, kusakabe, miwa, kugisaki | Klien DHCP Divisi B | 3 | dinamis (`192.235.3.x`) |
-| kirara | Worker API cadangan | 4 | `192.235.4.2` |
-| yaga | Database Master (MariaDB) | 4 | `192.235.4.3` |
-| inumaki | Database Slave (MariaDB) | 4 | `192.235.4.4` |
-| geto | Internal Load Balancer (nginx) | 4 | `192.235.4.5` |
-| maki | Worker frontend | 4 | `192.235.4.6` |
-| panda | Worker frontend | 4 | `192.235.4.7` |
-| nanami | Worker API utama | 4 | `192.235.4.8` |
-| todo | Worker API utama | 4 | `192.235.4.9` |
-| tengen | DHCP Server | 4 | `192.235.4.10` |
-
-Gateway semua host Network 1 adalah `192.235.1.1`, dan semua host Network 4 adalah `192.235.4.1`.
-
-### Alur trafik layanan
-
-```text
-                       ┌──────────────┐
- Klien (Network 2/3) ─▶│ DNS utahime  │  jujutsu.K48.com → 192.235.1.4 (gojo)
-                       │ DNS shoko    │
-                       └──────────────┘
-                              │
-                              ▼
-                      ┌───────────────┐
-                      │  gojo (nginx) │  reverse proxy, cache, rate limit
-                      └───────┬───────┘
-          path "/"            │            path "/api"
-      ┌──────────┴──────────┐ │ ┌───────────────────┐
-      ▼                     ▼ │ ▼
-    maki       panda  (Round Robin)    geto (nginx, Weighted RR 3:1)
-  (frontend) (frontend)                ├── nanami (weight 3)
-                                       ├── todo   (weight 1)
-                                       └── kirara (backup)
-                                                │
-                                                ▼
-                                   yaga (DB Master) ──▶ inumaki (DB Slave)
-```
-
-Cara membaca diagram: klien bertanya dulu ke DNS untuk mengetahui alamat `jujutsu.K48.com`, lalu mengirim request ke gojo. Gojo memilih tujuan berdasarkan path. Path `/` ke worker frontend, dan path `/api` ke geto yang membagi beban ke worker API. Worker API mencatat setiap request ke database yaga, yang disalin otomatis ke inumaki.
-
----
-
-## Daftar skrip di /root
-
-| Node | Skrip |
-| --- | --- |
-| utahime | `soal11_utahime.sh`, `soal12_utahime.sh` |
-| shoko | `soal11_shoko.sh`, `soal12_shoko.sh` |
-| yaga | `soal13_yaga.sh` |
-| inumaki | `soal13_inumaki.sh` |
-| maki, panda | `soal14_frontend.sh` |
-| nanami, todo, kirara | `soal14_api.sh` |
-| geto | `soal18_geto.sh` (final soal 15, 17, 18) |
-| gojo | `soal19_gojo.sh` (final soal 16, 17, 19) |
-| kusakabe | `bench.sh`, `summary.sh` (soal 20) |
-
----
-
-
 # PRAKTIKUM JARINGAN KOMPUTER MODUL 3
 
 ## Anggota Kelompok (K-48)
@@ -124,6 +22,16 @@ Cara membaca diagram: klien bertanya dulu ke DNS untuk mengetahui alamat `jujuts
 - [Soal 8 — Packet Capture DHCP](#soal-8-packet-capture-dhcp)
 - [Soal 9 — Pengujian Gangguan DHCP Relay](#soal-9-pengujian-gangguan-dhcp-relay)
 - [Soal 10 — Autostart dan Pengujian Setelah Restart](#soal-10-autostart-dan-pengujian-setelah-restart)
+- [Soal 11 — DNS Master-Slave BIND9](#-soal-11-dns-master-slave-bind9-utahime-dan-shoko)
+- [Soal 12 — A Record, CNAME, Reverse DNS, Forwarder](#-soal-12-a-record-cname-reverse-dns-dan-forwarder)
+- [Soal 13 — Replikasi MariaDB](#-soal-13-replikasi-mariadb-master-slave-yaga-dan-inumaki)
+- [Soal 14 — Worker Frontend dan API](#-soal-14-worker-frontend-dan-api)
+- [Soal 15 — Load Balancer geto](#-soal-15-load-balancer-geto-weighted-round-robin-31)
+- [Soal 16 — Reverse Proxy gojo](#-soal-16-reverse-proxy-gojo-path-based-routing)
+- [Soal 17 — IP Asli Klien](#-soal-17-meneruskan-ip-asli-klien)
+- [Soal 18 — Backup dan Health Check](#-soal-18-server-backup-kirara-dan-passive-health-check)
+- [Soal 19 — Proxy Cache dan Rate Limit](#-soal-19-proxy-caching-dan-rate-limiting-di-gojo)
+- [Soal 20 — Benchmark ApacheBench](#-soal-20-benchmark-apachebench-dan-analisis)
 - [Kendala](#kendala)
 - [Kesimpulan](#kesimpulan)
 
@@ -163,6 +71,34 @@ Network 1 digunakan sebagai DMZ yang menampung layanan DNS dan reverse proxy. Ne
 | Network 4 | `192.235.4.0/24` | `192.235.4.1` |
 
 Seluruh jaringan internal menggunakan subnet mask `255.255.255.0` atau `/24`. DHCP Server berada pada Network 4, sedangkan permintaan DHCP dari Network 2 dan Network 3 diteruskan oleh jichi melalui DHCP Relay.
+
+---
+
+### Alur trafik layanan
+
+```text
+                       ┌──────────────┐
+ Klien (Network 2/3) ─▶│ DNS utahime  │  jujutsu.K48.com → 192.235.1.4 (gojo)
+                       │ DNS shoko    │
+                       └──────────────┘
+                              │
+                              ▼
+                      ┌───────────────┐
+                      │  gojo (nginx) │  reverse proxy, cache, rate limit
+                      └───────┬───────┘
+          path "/"            │            path "/api"
+      ┌──────────┴──────────┐ │ ┌───────────────────┐
+      ▼                     ▼ │ ▼
+    maki       panda  (Round Robin)    geto (nginx, Weighted RR 3:1)
+  (frontend) (frontend)                ├── nanami (weight 3)
+                                       ├── todo   (weight 1)
+                                       └── kirara (backup)
+                                                │
+                                                ▼
+                                   yaga (DB Master) ──▶ inumaki (DB Slave)
+```
+
+Cara membaca diagram: klien bertanya dulu ke DNS untuk mengetahui alamat `jujutsu.K48.com`, lalu mengirim request ke gojo. Gojo memilih tujuan berdasarkan path. Path `/` ke worker frontend, dan path `/api` ke geto yang membagi beban ke worker API. Worker API mencatat setiap request ke database yaga, yang disalin otomatis ke inumaki.
 
 ---
 

@@ -767,10 +767,6 @@ ip addr flush dev eth0
 udhcpc -n -i eth0
 ```
 
-## Hasil
-
-![Tangkapan layar pengujian packet capture DHCP](assets/Tangkapan%20Layar%202026-10-13%20pukul%2016.29.53.png)
-
 ## Analisis
 
 Packet capture dapat digunakan untuk membuktikan bahwa pertukaran pesan DHCP berlangsung melalui jalur yang benar. Permintaan client diteruskan oleh jichi menuju tengen, kemudian server mengirimkan penawaran dan konfirmasi alamat IP.

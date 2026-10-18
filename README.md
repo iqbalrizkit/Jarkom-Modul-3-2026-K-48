@@ -166,7 +166,7 @@ Seluruh jaringan internal menggunakan subnet mask `255.255.255.0` atau `/24`. DH
 
 ---
 
-# Soal 1 — Konfigurasi Router dan Konektivitas
+# 📦 Soal 1 — Konfigurasi Router dan Konektivitas
 
 ## Penyampaian Ulang Soal
 
@@ -259,11 +259,11 @@ ping -c 3 192.235.4.1
 
 Berdasarkan tangkapan layar yang tersedia, konfigurasi alamat IP, tabel routing, dan pengujian ping digunakan untuk memeriksa konektivitas dasar jaringan.
 
-![Hasil konfigurasi alamat IP interface](assest/1-ip-a.png)
+![Hasil konfigurasi alamat IP interface](assets/1-ip-a.png)
 
-![Hasil pemeriksaan tabel routing](screenshot/1/1-ip-route.png)
+![Hasil pemeriksaan tabel routing](assets/1-ip-route.png)
 
-![Hasil pengujian konektivitas menggunakan ping](screenshot/1/1-ping.png)
+![Hasil pengujian konektivitas menggunakan ping](assets/1-ping.png)
 
 ## Analisis
 
@@ -273,7 +273,7 @@ IPv4 forwarding dan source NAT merupakan bagian penting agar paket dari jaringan
 
 ---
 
-# Soal 2 — Konfigurasi DHCP Server
+# 📦 Soal 2 — Konfigurasi DHCP Server
 
 ## Penyampaian Ulang Soal
 
@@ -355,9 +355,9 @@ cat /etc/dhcp/dhcpd.conf
 
 ## Hasil
 
-![Konfigurasi awal DHCP Server pada tengen](screenshot/2/2-konfigurasi-dhcp.png)
+![Konfigurasi awal DHCP Server pada tengen](assets/2-konfigurasi-dhcp.png)
 
-![Konfigurasi interface dan alamat IP tengen](screenshot/2/2-konfigurasi-interface.png)
+![Konfigurasi interface dan alamat IP tengen](assets/2-konfigurasi-interface.png)
 
 ## Analisis
 
@@ -367,7 +367,7 @@ Sementara itu, deklarasi Network 2 dan Network 3 menyediakan scope alamat bagi c
 
 ---
 
-# Soal 3 — DHCP Relay
+# 📦 Soal 3 — DHCP Relay
 
 ## Penyampaian Ulang Soal
 
@@ -438,9 +438,9 @@ ip route
 
 ## Hasil
 
-![Konfigurasi DHCP Relay pada jichi](screenshot/3/3-konfigurasi-dhcp-relay.png)
+![Konfigurasi DHCP Relay pada jichi](assets/3-konfigurasi-dhcp-relay.png)
 
-![Pengujian permintaan DHCP dari client](screenshot/3/3-ip-dhcp-tes.png)
+![Pengujian permintaan DHCP dari client](assets/3-ip-dhcp-tes.png)
 
 ## Analisis
 
@@ -450,7 +450,7 @@ Keberhasilan client memperoleh lease dari `192.235.4.10` menjadi bukti bahwa per
 
 ---
 
-# Soal 4 — Pembagian DHCP Pool Network 2
+# 📦 Soal 4 — Pembagian DHCP Pool Network 2
 
 ## Penyampaian Ulang Soal
 
@@ -528,13 +528,13 @@ Ulangi langkah tersebut pada itadori, fushiguro, zenin, dan okkotsu.
 
 ## Hasil
 
-![Alamat IP client itadori](screenshot/4/4-ip-itadori.png)
+![Alamat IP client itadori](assets/4-ip-itadori.png)
 
-![Alamat IP client fushiguro](screenshot/4/4-ip-fusiguro.png)
+![Alamat IP client fushiguro](assets/4-ip-fusiguro.png)
 
-![Alamat IP client zenin](screenshot/4/4-ip-zenin.png)
+![Alamat IP client zenin](assets/4-ip-zenin.png)
 
-![Alamat IP client okkotsu](screenshot/4/4-ip-okkotsu.png)
+![Alamat IP client okkotsu](assets/4-ip-okkotsu.png)
 
 ## Analisis
 
@@ -546,7 +546,7 @@ Alamat yang diterima masing-masing client perlu dicocokkan dengan rentang pool k
 
 ---
 
-# Soal 5 — Short Lease dan Long Lease
+# 📦 Soal 5 — Short Lease dan Long Lease
 
 ## Penyampaian Ulang Soal
 
@@ -630,11 +630,11 @@ ip route
 
 ## Hasil
 
-![Alamat IP client ino](screenshot/5/5-ino-ip.png)
+![Alamat IP client ino](assets/5-ino-ip.png)
 
-![Alamat IP client kusakabe](screenshot/5/5-kusakabe-ip.png)
+![Alamat IP client kusakabe](assets/5-kusakabe-ip.png)
 
-![Alamat IP client miwa](screenshot/5/5-miwa-ip.png)
+![Alamat IP client miwa](assets/5-miwa-ip.png)
 
 ## Analisis
 
@@ -646,7 +646,7 @@ Alamat IP yang terlihat pada tangkapan layar membuktikan alokasi alamat client. 
 
 ---
 
-# Soal 6 — DHCP Fixed Address
+# 📦 Soal 6 — DHCP Fixed Address
 
 ## Penyampaian Ulang Soal
 
@@ -702,7 +702,7 @@ ip route
 
 ## Hasil
 
-![Verifikasi fixed address kugisaki](screenshot/6/6-kugisaki-ip.png)
+![Verifikasi fixed address kugisaki](assets/6-kugisaki-ip.png)
 
 Hasil pengujian pada tangkapan layar menunjukkan kugisaki memperoleh alamat `192.235.3.99` dari DHCP Server `192.235.4.10`.
 
@@ -714,7 +714,7 @@ Dengan demikian, konfigurasi fixed address memungkinkan kugisaki mempertahankan 
 
 ---
 
-# Soal 7 — Verifikasi Konfigurasi Seluruh Client
+# 📦 Soal 7 — Verifikasi Konfigurasi Seluruh Client
 
 ## Penyampaian Ulang Soal
 
@@ -772,13 +772,13 @@ grep -E "^lease|^  hardware ethernet|^  client-hostname|^  binding state" /var/l
 
 ## Hasil
 
-![Verifikasi konfigurasi client ino](screenshot/7/7-ino-verifikasi.png)
+![Verifikasi konfigurasi client ino](assets/7-ino-verifikasi.png)
 
-![Verifikasi konfigurasi fixed address kugisaki](screenshot/7/7-kugisaki-verifikasi.png)
+![Verifikasi konfigurasi fixed address kugisaki](assets/7-kugisaki-verifikasi.png)
 
-![Verifikasi konfigurasi client kusakabe](screenshot/7/7-kusakabe-verifikasi.png)
+![Verifikasi konfigurasi client kusakabe](assets/7-kusakabe-verifikasi.png)
 
-![Verifikasi konfigurasi client miwa](screenshot/7/7-miwa-verifikasi.png)
+![Verifikasi konfigurasi client miwa](assets/7-miwa-verifikasi.png)
 
 ## Analisis
 
@@ -788,7 +788,7 @@ Kusakabe juga diperiksa sebagai client dengan short lease. Pemeriksaan keseluruh
 
 ---
 
-# Soal 8 — Packet Capture DHCP
+# 📦 Soal 8 — Packet Capture DHCP
 
 ## Penyampaian Ulang Soal
 
@@ -833,7 +833,7 @@ udhcpc -n -i eth0
 
 ## Hasil
 
-![Tangkapan layar pengujian packet capture DHCP](screenshot/8/Tangkapan%20Layar%202026-10-13%20pukul%2016.29.53.png)
+![Tangkapan layar pengujian packet capture DHCP](assets/Tangkapan%20Layar%202026-10-13%20pukul%2016.29.53.png)
 
 ## Analisis
 
@@ -843,7 +843,7 @@ Untuk membuktikan seluruh kriteria soal, output tcpdump perlu memperlihatkan uru
 
 ---
 
-# Soal 9 — Pengujian Gangguan DHCP Relay
+# 📦 Soal 9 — Pengujian Gangguan DHCP Relay
 
 ## Penyampaian Ulang Soal
 
@@ -906,9 +906,9 @@ ip route
 
 ## Hasil
 
-![Kegagalan memperoleh lease ketika DHCP Relay terganggu](screenshot/9/9-miwa-gagal.png)
+![Kegagalan memperoleh lease ketika DHCP Relay terganggu](assets/9-miwa-gagal.png)
 
-![Keberhasilan memperoleh lease setelah DHCP Relay dipulihkan](screenshot/9/9-miwa-berhasil.png)
+![Keberhasilan memperoleh lease setelah DHCP Relay dipulihkan](assets/9-miwa-berhasil.png)
 
 ## Analisis
 
@@ -920,7 +920,7 @@ Perbandingan kedua kondisi tersebut menunjukkan bahwa ketersediaan DHCP Relay be
 
 ---
 
-# Soal 10 — Autostart dan Pengujian Setelah Restart
+# 📦 Soal 10 — Autostart dan Pengujian Setelah Restart
 
 ## Penyampaian Ulang Soal
 
@@ -995,13 +995,13 @@ udhcpc -n -i eth0
 
 ## Hasil
 
-![Verifikasi client kusakabe setelah restart](screenshot/10/10-kusakabe-reboot.png)
+![Verifikasi client kusakabe setelah restart](assets/10-kusakabe-reboot.png)
 
-![Verifikasi client miwa setelah restart](screenshot/10/10-miwa-reboot.png)
+![Verifikasi client miwa setelah restart](assets/10-miwa-reboot.png)
 
-![Verifikasi client ino setelah restart](screenshot/10/10-ino-reboot.png)
+![Verifikasi client ino setelah restart](assets/10-ino-reboot.png)
 
-![Verifikasi client kugisaki setelah restart](screenshot/10/10-kugisaki-reboot.png)
+![Verifikasi client kugisaki setelah restart](assets/10-kugisaki-reboot.png)
 
 ## Analisis
 
@@ -1012,30 +1012,6 @@ Pada Network 3, ino dan kusakabe harus tetap memperoleh alamat dari pool short l
 Keberhasilan pengujian perlu dinilai dari kesesuaian alamat IP, gateway, lease, dan status layanan setelah restart. Tangkapan layar client setelah restart menjadi bukti bahwa proses pemberian alamat kembali diuji setelah node dijalankan ulang.
 
 ---
-
-# Kendala
-
-Beberapa hal yang perlu diperhatikan selama konfigurasi dan pengujian jaringan adalah sebagai berikut.
-
-1. **Konfigurasi interface dan routing.** Setiap interface harus menggunakan alamat IP dan subnet yang sesuai. Kesalahan alamat gateway atau tabel routing dapat mengganggu komunikasi antarjaringan.
-2. **Konfigurasi DHCP Server.** Deklarasi subnet harus sesuai dengan jaringan yang digunakan. File konfigurasi perlu diperiksa menggunakan `dhcpd -t` sebelum layanan dimulai ulang.
-3. **DHCP Relay.** Relay harus menunjuk ke alamat tengen yang benar dan menggunakan interface yang sesuai dengan jaringan client.
-4. **Pembagian pool DHCP.** MAC Address harus cocok dengan client yang dimaksud agar class dapat menentukan pool yang tepat.
-5. **Fixed address.** Reservasi kugisaki harus menggunakan MAC Address yang benar dan alamat yang berada di luar seluruh pool dinamis.
-6. **Pengujian setelah restart.** Status layanan perlu diperiksa kembali setelah node dijalankan ulang untuk memastikan layanan dapat berjalan secara otomatis.
-
----
-
-# Kesimpulan
-
-Praktikum Modul 3 soal 1 sampai 10 membahas pemulihan konektivitas jaringan, konfigurasi router, pemberian alamat IP otomatis, pemisahan DHCP pool, pengaturan lease, reservasi alamat IP, pemeriksaan paket DHCP, simulasi gangguan, dan pengaktifan layanan otomatis setelah restart.
-
-Router jichi berfungsi sebagai penghubung empat jaringan internal serta meneruskan permintaan DHCP melalui DHCP Relay. Tengen bertugas mengelola alokasi alamat IP sesuai subnet dan kelompok client. Pemisahan pool berdasarkan MAC Address memungkinkan client memperoleh rentang alamat yang berbeda, sedangkan pengaturan short lease, long lease, dan fixed address memberikan kebijakan alokasi yang lebih spesifik.
-
-Pengujian packet capture digunakan untuk memahami proses pertukaran pesan DHCP. Simulasi penghentian relay menunjukkan dampak gangguan terhadap permintaan alamat, sedangkan pengujian setelah pemulihan dan restart digunakan untuk memeriksa ketersediaan layanan.
-
-Secara keseluruhan, rangkaian soal ini menekankan bahwa jaringan yang berfungsi dengan baik tidak hanya memerlukan konfigurasi alamat IP, tetapi juga routing yang benar, layanan DHCP yang konsisten, pembagian alamat yang sesuai kebijakan, serta kemampuan layanan untuk kembali berjalan setelah terjadi gangguan atau restart.
-
 
 ## 📦 Soal 11: DNS Master-Slave BIND9 (utahime dan shoko)
 
@@ -2889,11 +2865,26 @@ Setelah pengujian, rate limit diaktifkan kembali di gojo dan tabel `request_logs
 
 # Kendala
 
-Tidak Terdapat kendala.
+Beberapa hal yang perlu diperhatikan selama konfigurasi dan pengujian jaringan adalah sebagai berikut.
+
+1. **Konfigurasi interface dan routing.** Setiap interface harus menggunakan alamat IP dan subnet yang sesuai. Kesalahan alamat gateway atau tabel routing dapat mengganggu komunikasi antarjaringan.
+2. **Konfigurasi DHCP Server.** Deklarasi subnet harus sesuai dengan jaringan yang digunakan. File konfigurasi perlu diperiksa menggunakan `dhcpd -t` sebelum layanan dimulai ulang.
+3. **DHCP Relay.** Relay harus menunjuk ke alamat tengen yang benar dan menggunakan interface yang sesuai dengan jaringan client.
+4. **Pembagian pool DHCP.** MAC Address harus cocok dengan client yang dimaksud agar class dapat menentukan pool yang tepat.
+5. **Fixed address.** Reservasi kugisaki harus menggunakan MAC Address yang benar dan alamat yang berada di luar seluruh pool dinamis.
+6. **Pengujian setelah restart.** Status layanan perlu diperiksa kembali setelah node dijalankan ulang untuk memastikan layanan dapat berjalan secara otomatis.
 
 ---
 
 # Kesimpulan
+
+Praktikum Modul 3 soal 1 sampai 10 membahas pemulihan konektivitas jaringan, konfigurasi router, pemberian alamat IP otomatis, pemisahan DHCP pool, pengaturan lease, reservasi alamat IP, pemeriksaan paket DHCP, simulasi gangguan, dan pengaktifan layanan otomatis setelah restart.
+
+Router jichi berfungsi sebagai penghubung empat jaringan internal serta meneruskan permintaan DHCP melalui DHCP Relay. Tengen bertugas mengelola alokasi alamat IP sesuai subnet dan kelompok client. Pemisahan pool berdasarkan MAC Address memungkinkan client memperoleh rentang alamat yang berbeda, sedangkan pengaturan short lease, long lease, dan fixed address memberikan kebijakan alokasi yang lebih spesifik.
+
+Pengujian packet capture digunakan untuk memahami proses pertukaran pesan DHCP. Simulasi penghentian relay menunjukkan dampak gangguan terhadap permintaan alamat, sedangkan pengujian setelah pemulihan dan restart digunakan untuk memeriksa ketersediaan layanan.
+
+Secara keseluruhan, rangkaian soal ini menekankan bahwa jaringan yang berfungsi dengan baik tidak hanya memerlukan konfigurasi alamat IP, tetapi juga routing yang benar, layanan DHCP yang konsisten, pembagian alamat yang sesuai kebijakan, serta kemampuan layanan untuk kembali berjalan setelah terjadi gangguan atau restart.
 
 - **DNS (11–12):** utahime (Master) dan shoko (Slave) menyinkronkan zona forward dan reverse secara otomatis. Domain utama mengarah ke gojo, `www` berupa CNAME, PTR tersedia, dan forwarder ke `192.168.122.1` membuat klien tetap bisa menjangkau internet.
 - **Database (13):** yaga (Master) dan inumaki (Slave) bereplikasi real-time dengan binary log. User remote dibatasi pada `192.235.4.%`, dan replikasi tetap sehat (`Yes`/`Yes`) pada pemeriksaan akhir.
